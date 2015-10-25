@@ -1,0 +1,57 @@
+[sssd]
+config_file_version = 2
+services = nss, pam<%= @sudo %>
+domains = LDAP
+
+[nss]
+filter_users = root,named,avahi,haldaemon,dbus,radiusd,news,nscd
+
+[pam]
+
+[domain/LDAP]
+<%- if node['sssd_ldap']['debug_level'] %>
+debug_level = <%= node['sssd_ldap']['debug_level'] %>
+<%- end %>
+auth_provider = <%= node['sssd_ldap']['auth_provider'] %>
+chpass_provider = <%= node['sssd_ldap']['chpass_provider'] %>
+id_provider = <%= node['sssd_ldap']['id_provider'] %>
+<%- if node['sssd_ldap']['ldap_sudo'] %>
+sudo_provider = <%= node['sssd_ldap']['sudo_provider'] %>
+<%-   if node['sssd_ldap']['ldap_sudo_search_base'] %>
+ldap_sudo_search_base = <%= node['sssd_ldap']['ldap_sudo_search_base'] %>
+<%-   end %>
+ldap_sudo_smart_refresh_interval = <%= node['sssd_ldap']['ldap_sudo_smart_refresh_interval'] %>
+ldap_sudo_full_refresh_interval  = <%= node['sssd_ldap']['ldap_sudo_full_refresh_interval'] %>
+<%- end %>
+cache_credentials = <%= node['sssd_ldap']['cache_credentials'] %>
+enumerate = <%= node['sssd_ldap']['enumerate'] %>
+
+ldap_schema = <%= node['sssd_ldap']['ldap_schema'] %>
+ldap_uri = <%= node['sssd_ldap']['ldap_uri'] %>
+
+ldap_tls_reqcert = <%= node['sssd_ldap']['ldap_tls_reqcert'] %>
+ldap_tls_cacertdir = <%= node['sssd_ldap']['ldap_tls_cacertdir'] %>
+ldap_id_use_start_tls = <%= node['sssd_ldap']['ldap_id_use_start_tls'] %>
+
+ldap_search_base = <%= node['sssd_ldap']['ldap_search_base'] %>
+ldap_user_search_base = <%= node['sssd_ldap']['ldap_user_search_base'] %>
+ldap_user_object_class = <%= node['sssd_ldap']['ldap_user_object_class'] %>
+ldap_user_name = <%= node['sssd_ldap']['ldap_user_name'] %>
+<%- if node['sssd_ldap']['override_homedir'] %>
+override_homedir = <%= node['sssd_ldap']['override_homedir'] %>
+<%- end %>
+shell_fallback = <%= node['sssd_ldap']['shell_fallback'] %>
+
+ldap_group_search_base = <%= node['sssd_ldap']['ldap_group_search_base'] %>
+ldap_group_object_class = <%= node['sssd_ldap']['ldap_group_object_class'] %>
+
+<% if node['sssd_ldap']['ldap_default_bind_dn'] %>ldap_default_bind_dn = <%= node['sssd_ldap']['ldap_default_bind_dn'] %><% end %>
+<% if node['sssd_ldap']['ldap_default_authtok'] %>ldap_default_authtok = <%= node['sssd_ldap']['ldap_default_authtok'] %><% end %>
+
+<%- if node['sssd_ldap']['ldap_access_filter'] %>
+access_provider = <%= node['sssd_ldap']['access_provider'] %>
+ldap_access_filter = <%= node['sssd_ldap']['ldap_access_filter'] %>
+<%- end %>
+
+min_id = <%= node['sssd_ldap']['min_id'] %>
+max_id = <%= node['sssd_ldap']['max_id'] %>

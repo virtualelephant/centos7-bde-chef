@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!-- check for all settings at http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/core-default.xml -->
+<configuration>
+<%- if node[:hadoop][:cluster_has_hdfs_ha_or_federation] %>
+
+<property>
+  <name><%= node[:hadoop][:conf][:fs_default_name] %></name>
+  <%-
+    first_facet_has_no_hdfs_ha = @namenode_facets[0][@nameservices.first].length == 1
+    if node[:hadoop][:cluster_has_only_federation] or first_facet_has_no_hdfs_ha
+  %>
+  <value>hdfs://<%= "#{@namenode_facets[0][@nameservices.first][0]}:#{@namenode_port}" %></value>
+  <%- else %>
+  <value>hdfs://<%= @nameservices.first %></value>
+  <%- end %>
+</property>
+<%- if node[:hadoop][:namenode_ha_enabled] %>
+
+<property>
+  <name>ha.zookeeper.quorum</name>
+  <value><%= @zookeepers_address %></value>
+</property>
+  <%- end %>
+<%- else %>
+<property>
+  <name><%= node[:hadoop][:conf][:fs_default_name] %></name>
+  <value>hdfs://<%= @namenode_address %>:<%= @namenode_port %></value>
+</property>
+<%- end %>
+
+<%- if node[:hadoop][:rack_topology][:enabled] %>
+<!-- turn on Hadoop Rack Awareness -->
+<property>
+  <name>topology.script.file.name</name>
+  <value>/etc/hadoop/conf/topology.sh</value>
+  <description>Topology scripts are used by hadoop to determine the rack location of nodes. This information is used by hadoop to replicate block data to redundant racks.</description>
+</property>
+<%- end %>
+
+<%- if node[:hadoop][:rack_topology][:hve_enabled] %>
+<!-- settings for Hadoop Virtualization Extensions -->
+<property>
+  <name>net.topology.nodegroup.aware</name>
+  <value>true</value>
+  <description>By default, network topology is not aware of nodegroup layer.</description>
+</property>
+<property>
+  <name>net.topology.impl</name>
+  <value>org.apache.hadoop.net.NetworkTopologyWithNodeGroup</value>
+  <description>The default implementation of NetworkTopology which is classic three layer one.</description>
+</property>
+<property>
+  <name>dfs.block.replicator.classname</name>
+  <%- if node[:is_hadoop_yarn] %>
+  <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup</value>
+  <%- else %>
+  <value>org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyWithNodeGroup</value>
+  <%- end %>
+  <description>The default implementation of BlockPlacementPolicy.</description>
+</property>
+<%- end %>
+
+<!-- properties specified by users -->
+<%- conf = node['cluster_configuration']['hadoop']['core-site.xml'] || {} rescue conf = {} %>
+<%- conf.map do |key, value|
+  next if ['fs.default.name', 'fs.defaultFS'].include?(key)
+%>
+<property>
+  <name><%= key %></name>
+  <value><%= value %></value>
+</property>
+<%- end %>
+<!-- end -->
+
+</configuration>

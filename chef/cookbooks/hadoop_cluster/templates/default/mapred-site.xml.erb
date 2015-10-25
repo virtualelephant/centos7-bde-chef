@@ -1,0 +1,221 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!-- check for all settings at http://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml -->
+<configuration>
+
+<%- if node.role?('hadoop_jobtracker') %>
+<property>
+  <name>mapred.job.tracker.http.address</name>
+  <value>0.0.0.0:50030</value>
+</property>
+<%- end %>
+
+<%- if node[:is_hadoop_yarn] %>
+<property>
+  <name>mapreduce.framework.name</name>
+  <value>yarn</value>
+</property>
+<property>
+  <name>mapreduce.tasktracker.dns.interface</name>
+  <value><%= @mapred_network_dev %></value>
+</property>
+<property>
+  <name>yarn.app.mapreduce.am.staging-dir</name>
+  <value>/tmp/hadoop-yarn/staging</value>
+</property>
+<%- else %>
+<property>
+  <name>mapred.job.tracker</name>
+  <value><%= @jobtracker_address %>:<%= @jobtracker_port %></value>
+</property>
+<%- end %>
+
+<property>
+  <name>mapred.local.dir</name>
+  <value><%= @mapred_local_dirs %></value>
+  <final>true</final>
+</property>
+
+<property>
+  <name>mapred.map.tasks.speculative.execution</name>
+  <value>false</value>
+</property>
+
+<property>
+  <name>mapred.reduce.tasks.speculative.execution</name>
+  <value>false</value>
+</property>
+
+<property>
+  <name>mapreduce.tasktracker.outofband.heartbeat</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>mapreduce.cluster.administrators</name>
+  <value>root,mapred</value>
+</property>
+
+<!-- communication -->
+<% if node.role?('hadoop_tasktracker') %>
+
+<property>
+  <name>mapred.task.tracker.http.address</name>
+  <value><%= @mapred_bind_address %>:50060</value>
+</property>
+
+<property>
+  <name>mapred.tasktracker.map.tasks.maximum</name>
+  <value><%= node[:hadoop][:max_map_tasks] %></value>
+</property>
+
+<property>
+  <name>mapred.tasktracker.reduce.tasks.maximum</name>
+  <value><%= node[:hadoop][:max_reduce_tasks] %></value>
+</property>
+<% end %>
+
+<property>
+  <name>tasktracker.http.threads</name>
+  <value><%= node[:hadoop][:tasktracker_http_threads] %></value>
+</property>
+
+<property>
+  <name>mapred.job.tracker.handler.count</name>
+  <value><%= node[:hadoop][:jobtracker_handler_count] %></value>
+</property>
+
+<!-- compression -->
+
+<property>
+  <name>mapred.output.compress</name>
+  <value><%= node[:hadoop][:compress_map_output] %></value>
+</property>
+
+<property>
+  <name>mapred.output.compression.type</name>
+  <value><%= node[:hadoop][:output_compression_type] %></value>
+</property>
+
+<property>
+  <name>mapred.compress.map.output</name>
+  <value><%= node[:hadoop][:compress_map_output] %></value>
+</property>
+
+<!-- map tuning -->
+
+<property>
+  <name>io.sort.mb</name>
+  <value>100</value>
+</property>
+
+<!-- reduce tuning -->
+
+<property>
+  <name>io.sort.factor</name>
+  <value><%= node[:hadoop][:io_sort_factor] %></value>
+</property>
+
+<property>
+  <name>io.sort.record.percent</name>
+  <value><%= node[:hadoop][:io_sort_record_percent] %></value>
+</property>
+
+<property>
+  <name>mapred.inmem.merge.threshold</name>
+  <value>0</value>
+</property>
+
+<property>
+  <name>mapred.reduce.parallel.copies</name>
+  <value><%= node[:hadoop][:reduce_parallel_copies] %></value>
+</property>
+
+<!-- child jobs -->
+<% if node.role?('hadoop_tasktracker') %>
+<property>
+  <name>mapred.tasktracker.dns.interface</name>
+  <value><%= @mapred_network_dev %></value>
+</property>
+
+<property>
+  <name>mapred.child.java.opts</name>
+  <value><%= node[:hadoop][:java_child_opts] %></value>
+</property>
+
+<property>
+  <name>mapred.child.ulimit</name>
+  <value><%= node[:hadoop][:java_child_ulimit] %></value>
+</property>
+<% else %>
+<!-- <property> -->
+<!-- <name>mapred.child.java.opts</name> -->
+<!-- <value>This value is only set on nodes with hadoop_tasktracker role, please check that kind of nodes if you want to inspect this attribute</value> -->
+<!-- </property> -->
+
+<!-- <property> -->
+<!-- <name>mapred.child.ulimit</name> -->
+<!-- <value>This value is only set on nodes with hadoop_tasktracker role, please check that kind of nodes if you want to inspect this attribute</value> -->
+<!-- </property> -->
+<% end %>
+
+<property>
+  <name>mapred.job.reuse.jvm.num.tasks</name>
+  <value>-1</value>
+</property>
+
+<property>
+  <name>mapred.hosts.exclude</name>
+  <value>/etc/<%= node[:hadoop][:hadoop_handle] %>/conf/mapred.hosts.exclude</value>
+</property>
+
+<!-- job scheduling -->
+
+<property>
+  <name>mapred.userlog.retain.hours</name>
+  <value><%= node[:hadoop][:mapred_userlog_retain_hours] %></value>
+</property>
+
+<property>
+  <name>mapred.jobtracker.completeuserjobs.maximum</name>
+  <value><%= node[:hadoop][:mapred_jobtracker_completeuserjobs_maximum] %></value>
+</property>
+
+<% if node[:hadoop][:rack_topology][:hve_enabled] and !node[:is_hadoop_yarn] %>
+<!-- settings for Hadoop Virtualization Extensions -->
+<property>
+  <name>mapred.jobtracker.nodegroup.aware</name>
+  <value>true</value>
+  <description>Identify if jobtracker is aware of nodegroup layer.</description>
+</property>
+<property>
+  <name>mapred.jobtracker.jobSchedulable</name>
+  <value>org.apache.hadoop.mapred.JobSchedulableWithNodeGroup</value>
+  <description>The class responsible for an entity in FairScheduler that can launch tasks.</description>
+</property>
+<property>
+  <name>mapred.task.cache.levels</name>
+  <value>3</value>
+  <description> This is the max level of the task cache. For example, if the level is 2, the tasks cached are at the host level and at the rack level.</description>
+</property>
+<% end %>
+
+<property>
+  <name>yarn.app.mapreduce.am.resource.mb</name>
+  <value><%= node[:yarn][:am_resource_mem] %></value>
+  <description>The amount of memory the MR AppMaster needs.</description>
+</property>
+
+<!-- properties specified by users -->
+<%- conf = node['cluster_configuration']['hadoop']['mapred-site.xml'] || {} rescue conf = {} %>
+<%- conf.map do |key, value|
+  next if ['mapred.job.tracker'].include?(key)
+%>
+<property>
+  <name><%= key %></name>
+  <value><%= value %></value>
+</property>
+<%- end %>
+<!-- end -->
+
+</configuration>

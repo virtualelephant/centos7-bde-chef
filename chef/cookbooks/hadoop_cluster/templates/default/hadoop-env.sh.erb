@@ -1,0 +1,43 @@
+# JAVA_HOME is required by HADOOP_HOME/bin/*.sh scripts
+# detect JAVA_HOME and PATH
+. /etc/profile
+. /etc/environment
+
+# This is for CDH4 MRv1 only
+if [ -f /etc/default/hadoop-0.20-mapreduce ]; then
+  export HADOOP_HOME=/usr/lib/hadoop-0.20-mapreduce
+fi
+
+# Hadoop env
+export HADOOP_HOME_WARN_SUPPRESS=TRUE
+export HADOOP_COMMON_HOME=<%= @hadoop_home %>
+export HADOOP_HOME="${HADOOP_HOME:-$HADOOP_COMMON_HOME}"
+export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-/etc/hadoop/conf}"
+export HADOOP_PID_DIR="${HADOOP_PID_DIR:-/var/run/hadoop}"
+export HADOOP_LOG_DIR="/var/log/hadoop"
+
+## YARN_* are used by Hadoop YARN (e.g. CDH4 YARN, Pivotal HD)
+#export YARN_COMMON_HOME=${YARN_HOME}
+#export YARN_PID_DIR="${YARN_PID_DIR:-/var/run/hadoop-yarn}"
+
+export HADOOP_HDFS_HOME="${HADOOP_HDFS_HOME:-<%= @hadoop_hdfs_home %>}"
+<%- if node[:hadoop][:hadoop_mapred_dir] %>
+export HADOOP_MAPRED_HOME=<%= node[:hadoop][:hadoop_mapred_dir] %>
+<%- else %>
+export HADOOP_MAPRED_HOME="${HADOOP_MAPRED_HOME:-/usr/lib/hadoop-mapreduce}"
+<%- end %>
+
+export HADOOP_YARN_HOME=<%= node[:hadoop][:yarn_home_dir] %>
+export YARN_HOME=$HADOOP_YARN_HOME
+export YARN_CONF_DIR=<%= node[:hadoop][:hadoop_conf_dir] %>
+
+export HADOOP_SSH_OPTS="-o StrictHostKeyChecking=no"
+
+# env variables specified by users
+<%- conf = node['cluster_configuration']['hadoop']['hadoop-env.sh'] || {} rescue conf = {} %>
+<%- conf.map do |key, value| %>
+export <%= key %>="<%= value %>"
+<%- end %>
+
+export JAVA_HOME
+export PATH=$HADOOP_COMMON_HOME/bin:$JAVA_HOME/bin:$PATH

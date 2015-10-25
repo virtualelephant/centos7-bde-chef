@@ -1,0 +1,8 @@
+# Configuration file for haproxy-marathon-bridge script
+<%
+  ha_url_list = []
+  @haproxy_server_list.each do |ha_server|
+    ha_url_list << "#{ha_server}"
+  end
+%>
+<%= ha_url_list.join(":8080\n") + ":8080" %>

@@ -1,0 +1,229 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!-- check for all settings at http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/hdfs-default.xml -->
+<configuration>
+<%- if node[:hadoop][:cluster_has_hdfs_ha_or_federation] %>
+
+<property>
+  <name>dfs.nameservices</name>
+  <value><%= @nameservices.join(',') %></value>
+</property>
+<%-
+  @namenode_facets.each do | namenode_facet |
+    namenode_facet.each do | name, addresses |
+      namenode_ha_enabled = addresses.length > 1
+      if namenode_ha_enabled
+%>
+
+<property>
+  <name>dfs.ha.namenodes.<%= name %></name>
+  <value><%- addresses.each_with_index do |address, index| %><%= addresses.length - index > 1 ? "namenode#{index}," : "namenode#{index}" %><%- end %></value>
+</property>
+
+<property>
+  <name>dfs.client.failover.proxy.provider.<%= name %></name>
+  <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+<%-
+      end
+      addresses.each_with_index do |address, index|
+        if namenode_ha_enabled
+          namenode_name = "#{name}.namenode#{index}"
+        else
+          namenode_name = "#{name}"
+        end
+%>
+
+<property>
+  <name>dfs.namenode.rpc-address.<%= namenode_name %></name>
+  <value><%= "#{address}:#{node.default[:hadoop][:namenode_service_port]}" %></value>
+</property>
+
+<property>
+  <name>dfs.namenode.http-address.<%= namenode_name %></name>
+  <value><%= "#{address}:#{node.default[:hadoop][:namenode_web_service_port]}" %></value>
+</property>
+<%-
+      end
+      if node[:hadoop][:namenode_ha_enabled] and namenode_ha_enabled
+%>
+
+<property>
+  <name>dfs.namenode.shared.edits.dir.<%= name %></name>
+<value>qjournal://<%= "#{@journalnodes_address}/#{name}" %></value>
+</property>
+<%-
+      end
+    end
+  end
+  if node.role?("hadoop_journalnode")
+%>
+
+<property>
+  <name>dfs.journalnode.edits.dir</name>
+  <value><%= @journalnode_edits_dir %></value>
+</property>
+<%
+  end
+  if node[:hadoop][:namenode_ha_enabled]
+%>
+
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>
+    sshfence
+    shell(/bin/true)
+  </value>
+</property>
+
+<property>
+  <name>dfs.ha.fencing.ssh.private-key-files</name>
+  <value>/root/.ssh/id_rsa</value>
+</property>
+
+<property>
+  <name>dfs.ha.automatic-failover.enabled</name>
+  <value>true</value>
+</property>
+<%-
+  end
+else
+%>
+<property>
+  <name>dfs.http.address</name>
+  <value><%= @namenode_address %>:50070</value>
+</property>
+<%- end %>
+
+<% if node.role?('hadoop_datanode') %>
+<property>
+  <name>dfs.datanode.dns.interface</name>
+  <value><%= @hdfs_network_dev %></value>
+</property>
+<property>
+  <name>dfs.datanode.address</name>
+  <value><%= @hdfs_bind_address %>:50010</value>
+</property>
+<property>
+  <name>dfs.datanode.ipc.address</name>
+  <value><%= @hdfs_bind_address %>:50020</value>
+</property>
+<!-- depracated, to be compatible with old version Hadoop -->
+<property>
+  <name>dfs.datanode.bindAddress</name>
+  <value><%= @hdfs_bind_address %></value>
+</property>
+<property>
+  <name>dfs.datanode.http.address</name>
+  <value><%= @hdfs_bind_address %>:50075</value>
+</property>
+<% end %>
+
+<property>
+  <name>dfs.permissions</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>dfs.replication</name>
+  <value><%= node[:hadoop][:dfs_replication] %></value>
+</property>
+
+<property>
+  <name>dfs.name.dir</name>
+  <value><%= @dfs_name_dirs %></value>
+  <final>true</final>
+</property>
+
+<property>
+  <name>dfs.data.dir</name>
+  <value><%= @dfs_data_dirs %></value>
+  <final>true</final>
+</property>
+
+<property>
+  <name>dfs.datanode.failed.volumes.tolerated</name>
+  <value><%= @dfs_data_dirs_count - 1 %></value>
+</property>
+
+<property>
+  <!-- If its value is great than available diskspace on datanode, datanode will reports its available diskspace as 0,
+       thus namenode will throw a java.io.IOException: File /hadoop/system/mapred/jobtracker.info could only be replicated to 0 nodes, instead of 1. -->
+  <name>dfs.datanode.du.reserved</name>
+  <value>0</value>
+</property>
+
+<property>
+  <name>dfs.datanode.handler.count</name>
+  <value><%= node[:hadoop][:datanode_handler_count] %></value>
+</property>
+
+<property>
+  <!-- see https://issues.apache.org/jira/browse/HDFS-1861 -->
+  <name>dfs.datanode.max.xceivers</name>
+  <value>4096</value>
+</property>
+
+<property>
+  <!-- see https://issues.apache.org/jira/browse/HADOOP-5464 -->
+  <name>dfs.datanode.socket.write.timeout</name>
+  <value>3000000</value>
+</property>
+
+<property>
+  <name>dfs.socket.timeout</name>
+  <value>3000000</value>
+</property>
+
+<property>
+  <name>dfs.datanode.drop.cache.behind.writes</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>dfs.datanode.drop.cache.behind.reads</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>dfs.datanode.sync.behind.writes</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>dfs.hosts.exclude</name>
+  <value>/etc/<%= node[:hadoop][:hadoop_handle] %>/conf/dfs.hosts.exclude</value>
+</property>
+
+<property>
+  <name>dfs.namenode.handler.count</name>
+  <value><%= node[:hadoop][:namenode_handler_count] %></value>
+</property>
+
+<property>
+  <name>dfs.balance.bandwidthPerSec</name>
+  <value><%= node[:hadoop][:max_balancer_bandwidth] %></value>
+</property>
+
+<property>
+  <name>dfs.webhdfs.enabled</name>
+  <value>true</value>
+  <description>WebHDFS REST API http://hadoop.apache.org/common/docs/stable/webhdfs.html</description>
+</property>
+<property>
+  <name>dfs.support.append</name>
+  <value>true</value>
+  <description>enable durable sync, or hbase cluster will lost data when the cluster is restarted</description>
+</property>
+
+<!-- properties specified by users -->
+<%- conf = node['cluster_configuration']['hadoop']['hdfs-site.xml'] || {} rescue conf = {} %>
+<%- conf.map do |key, value| %>
+<property>
+  <name><%= key %></name>
+  <value><%= value %></value>
+</property>
+<%- end %>
+<!-- end -->
+
+</configuration>
